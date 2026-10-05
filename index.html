@@ -72,25 +72,30 @@
   /* Filtro */
   .filters {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin: 22px 0 18px;
+    align-items: center;
+    gap: 5px;
+    margin: 18px -16px 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
     position: sticky;
     top: 0;
-    padding: 10px 0;
+    padding: 10px 16px;
     background: var(--bg);
     z-index: 2;
   }
-  .chip-row { display: flex; gap: 8px; }
+  .filters::-webkit-scrollbar { display: none; }
+  .filters .sep { flex: none; width: 1px; height: 20px; background: var(--line); margin: 0 1px; }
   .chip {
     border: 1px solid var(--line);
     background: var(--surface);
     color: var(--ink);
     font: inherit;
-    font-size: 14px;
+    flex: none;
+    font-size: 13.5px;
     font-weight: 500;
-    padding: 7px 14px;
+    padding: 7px 9px;
     border-radius: 999px;
+    white-space: nowrap;
     cursor: pointer;
     transition: background .15s, border-color .15s, color .15s;
   }
@@ -203,7 +208,7 @@
     max-width: 560px; margin: 0 auto;
     background: var(--surface);
     border-radius: 24px 24px 0 0;
-    padding: 10px 20px calc(env(safe-area-inset-bottom) + 20px);
+    padding: 18px 20px calc(env(safe-area-inset-bottom) + 14px);
     transform: translateY(105%);
     transition: transform .28s cubic-bezier(.2,.8,.2,1);
     z-index: 11;
@@ -211,16 +216,15 @@
     overflow-y: auto;
   }
   .sheet.open { transform: translateY(0); }
-  .grabber { width: 40px; height: 4px; border-radius: 4px; background: var(--line); margin: 0 auto 14px; }
   .sheet h2 {
     font-family: "Fraunces", Georgia, serif;
     font-weight: 500;
-    font-size: 22px;
-    margin: 0 0 18px;
+    font-size: 21px;
+    margin: 0 0 12px;
   }
 
-  label.field { display: block; margin-bottom: 16px; }
-  .field-label { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 6px; }
+  label.field { display: block; margin-bottom: 12px; }
+  .field-label { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 4px; }
   input[type="date"], textarea {
     width: 100%;
     font: inherit;
@@ -228,15 +232,15 @@
     background: var(--bg);
     border: 1px solid var(--line);
     border-radius: 14px;
-    padding: 12px 14px;
+    padding: 10px 14px;
     outline: none;
     transition: border-color .15s, box-shadow .15s;
     -webkit-appearance: none;
     appearance: none;
   }
-  input[type="date"] { min-height: 48px; }
-  textarea { min-height: 120px; resize: vertical; }
-  textarea#f-text { min-height: 76px; }
+  input[type="date"] { min-height: 44px; }
+  textarea { min-height: 96px; resize: vertical; }
+  textarea#f-text { min-height: 64px; }
   input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(242,193,78,.2); }
 
   .segmented {
@@ -246,7 +250,7 @@
   .segmented input { position: absolute; opacity: 0; pointer-events: none; }
   .segmented label {
     text-align: center;
-    padding: 12px;
+    padding: 10px;
     border-radius: 14px;
     border: 1px solid var(--line);
     background: var(--bg);
@@ -258,16 +262,18 @@
   .segmented input:checked + label.hist { background: var(--hist-bg); border-color: var(--hist-bg); color: var(--hist-ink); }
   .segmented input:focus-visible + label { box-shadow: 0 0 0 3px rgba(242,193,78,.3); }
 
-  .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; }
+  .actions { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: 16px; }
+  .setup .actions { display: flex; flex-direction: column; }
   .btn {
     font: inherit; font-weight: 600;
     border: 0; border-radius: 14px;
-    padding: 14px;
+    padding: 13px;
     cursor: pointer;
   }
   .btn-primary { background: var(--ink); color: #fff; }
   .btn-primary:disabled { opacity: .35; cursor: default; }
-  .btn-ghost { background: transparent; color: var(--muted); }
+  .btn-ghost { background: var(--bg); color: var(--muted); }
+  .btn-del { display: block; width: 100%; margin-top: 6px; padding: 10px; font-size: 15px; }
   .btn-danger { background: transparent; color: var(--danger); }
   .btn-danger.confirm { background: #FBE4E1; }
 
@@ -345,17 +351,12 @@
       </button>
     </header>
 
-    <nav class="filters" aria-label="Filtros">
-      <div class="chip-row" role="group" aria-label="Filtrar por tipo">
-        <button class="chip" data-filter="Todas" aria-pressed="true">Todas</button>
-        <button class="chip" data-filter="Anécdota" aria-pressed="false">Anécdotas</button>
-        <button class="chip" data-filter="Historia" aria-pressed="false">Historias</button>
-      </div>
-      <div class="chip-row" role="group" aria-label="Filtrar por estado">
-        <button class="chip" data-estado="todas" aria-pressed="true">Todas</button>
-        <button class="chip" data-estado="pendientes" aria-pressed="false">Por escribir</button>
-        <button class="chip" data-estado="escritas" aria-pressed="false">Escritas</button>
-      </div>
+    <nav class="filters" aria-label="Filtros (toca de nuevo para quitar)">
+      <button class="chip" data-filter="Anécdota" aria-pressed="false">Anécdotas</button>
+      <button class="chip" data-filter="Historia" aria-pressed="false">Historias</button>
+      <span class="sep" aria-hidden="true"></span>
+      <button class="chip" data-estado="escritas" aria-pressed="false">Escrito</button>
+      <button class="chip" data-estado="pendientes" aria-pressed="false">No escrito</button>
     </nav>
 
     <section class="list" id="list" aria-live="polite"></section>
@@ -368,7 +369,6 @@
   <div class="overlay" id="overlay"></div>
 
   <form class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" autocomplete="off">
-    <div class="grabber"></div>
     <h2 id="sheet-title">Nueva entrada</h2>
 
     <label class="field">
@@ -397,10 +397,10 @@
     </div>
 
     <div class="actions">
-      <button type="submit" class="btn btn-primary" id="save">Guardar</button>
-      <button type="button" class="btn btn-danger" id="del" hidden>Eliminar</button>
       <button type="button" class="btn btn-ghost" id="cancel">Cancelar</button>
+      <button type="submit" class="btn btn-primary" id="save">Guardar</button>
     </div>
+    <button type="button" class="btn btn-danger btn-del" id="del" hidden>Eliminar</button>
   </form>
 
   <div class="toast" id="toast"></div>
@@ -591,7 +591,7 @@
       empty.className = "empty";
       if (servidor === null && configurado()) empty.innerHTML = "<strong>Cargando tus registros…</strong>";
       else if (!entries.length) empty.innerHTML = "<strong>Aún no hay registros</strong>Toca el botón + para agregar el primero.";
-      else if (filtroEstado === "escritas") empty.innerHTML = "<strong>Nada escrito todavía con este filtro</strong>Marca el círculo de una entrada cuando la escribas.";
+      else if (filtroEstado === "escritas") empty.innerHTML = "<strong>Nada escrito todavía</strong>Marca el círculo de una entrada cuando la escribas.";
       else if (filtroEstado === "pendientes") empty.innerHTML = "<strong>No queda nada por escribir</strong>Todo lo de este filtro ya está escrito.";
       else empty.innerHTML = `<strong>Sin ${filter === "Anécdota" ? "anécdotas" : "historias"} todavía</strong>Cambia el filtro o agrega una nueva.`;
       list.appendChild(empty);
@@ -774,17 +774,18 @@
 
   // ---------- Eventos ----------
 
+  // Cada filtro se activa al tocarlo y se quita al tocarlo de nuevo. Un tipo y un estado se pueden combinar.
   document.querySelectorAll(".chip[data-filter]").forEach(chip => {
     chip.addEventListener("click", () => {
-      filter = chip.dataset.filter;
-      document.querySelectorAll(".chip[data-filter]").forEach(c => c.setAttribute("aria-pressed", String(c === chip)));
+      filter = filter === chip.dataset.filter ? "Todas" : chip.dataset.filter;
+      document.querySelectorAll(".chip[data-filter]").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.filter === filter)));
       render();
     });
   });
   document.querySelectorAll(".chip[data-estado]").forEach(chip => {
     chip.addEventListener("click", () => {
-      filtroEstado = chip.dataset.estado;
-      document.querySelectorAll(".chip[data-estado]").forEach(c => c.setAttribute("aria-pressed", String(c === chip)));
+      filtroEstado = filtroEstado === chip.dataset.estado ? "todas" : chip.dataset.estado;
+      document.querySelectorAll(".chip[data-estado]").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.estado === filtroEstado)));
       render();
     });
   });
