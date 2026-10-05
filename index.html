@@ -72,6 +72,7 @@
   /* Filtro */
   .filters {
     display: flex;
+    flex-direction: column;
     gap: 8px;
     margin: 22px 0 18px;
     position: sticky;
@@ -80,6 +81,7 @@
     background: var(--bg);
     z-index: 2;
   }
+  .chip-row { display: flex; gap: 8px; }
   .chip {
     border: 1px solid var(--line);
     background: var(--surface);
@@ -138,7 +140,7 @@
   .check svg { width: 14px; height: 14px; }
   .check[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
   .card.done { opacity: .55; }
-  .card.done .text { text-decoration: line-through; text-decoration-color: var(--muted); }
+  .card.done .text, .card.done .desc { text-decoration: line-through; text-decoration-color: var(--muted); }
   .card-top {
     display: flex;
     align-items: center;
@@ -155,7 +157,10 @@
   .pill.anec { background: var(--anec-bg); color: var(--anec-ink); }
   .pill.hist { background: var(--hist-bg); color: var(--hist-ink); }
   .date { font-size: 13px; color: var(--muted); }
-  .text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-weight: 500; }
+  .desc { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); font-size: 15px; }
+  .text + .desc { margin-top: 4px; }
+  .card-top + .desc { margin-top: 0; color: var(--ink); font-size: 16px; }
 
   .empty {
     text-align: center;
@@ -230,7 +235,8 @@
     appearance: none;
   }
   input[type="date"] { min-height: 48px; }
-  textarea { min-height: 140px; resize: vertical; }
+  textarea { min-height: 120px; resize: vertical; }
+  textarea#f-text { min-height: 76px; }
   input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(242,193,78,.2); }
 
   .segmented {
@@ -339,10 +345,17 @@
       </button>
     </header>
 
-    <nav class="filters" aria-label="Filtrar por tipo">
-      <button class="chip" data-filter="Todas" aria-pressed="true">Todas</button>
-      <button class="chip" data-filter="Anécdota" aria-pressed="false">Anécdotas</button>
-      <button class="chip" data-filter="Historia" aria-pressed="false">Historias</button>
+    <nav class="filters" aria-label="Filtros">
+      <div class="chip-row" role="group" aria-label="Filtrar por tipo">
+        <button class="chip" data-filter="Todas" aria-pressed="true">Todas</button>
+        <button class="chip" data-filter="Anécdota" aria-pressed="false">Anécdotas</button>
+        <button class="chip" data-filter="Historia" aria-pressed="false">Historias</button>
+      </div>
+      <div class="chip-row" role="group" aria-label="Filtrar por estado">
+        <button class="chip" data-estado="todas" aria-pressed="true">Todas</button>
+        <button class="chip" data-estado="pendientes" aria-pressed="false">Por escribir</button>
+        <button class="chip" data-estado="escritas" aria-pressed="false">Escritas</button>
+      </div>
     </nav>
 
     <section class="list" id="list" aria-live="polite"></section>
@@ -364,8 +377,13 @@
     </label>
 
     <label class="field">
-      <span class="field-label">Anotación</span>
-      <textarea id="f-text" placeholder="¿Qué pasó? ¿Qué quieres recordar?" required></textarea>
+      <span class="field-label">Título</span>
+      <textarea id="f-text" rows="2" placeholder="Tarde en el parque" autocapitalize="sentences"></textarea>
+    </label>
+
+    <label class="field">
+      <span class="field-label">Descripción (opcional)</span>
+      <textarea id="f-desc" placeholder="¿Qué pasó? ¿Qué quieres recordar?" autocapitalize="sentences"></textarea>
     </label>
 
     <div class="field">
@@ -425,13 +443,14 @@
   let estado = "";
   let procesando = false, leyendo = false;
   let filter = "Todas";
+  let filtroEstado = "todas";
   let editingId = null;
   let ultimoRender = "";
 
   const $ = (id) => document.getElementById(id);
   const list = $("list"), count = $("count"), sync = $("sync");
   const overlay = $("overlay"), sheet = $("sheet");
-  const fDate = $("f-date"), fText = $("f-text"), saveBtn = $("save"), delBtn = $("del");
+  const fDate = $("f-date"), fText = $("f-text"), fDesc = $("f-desc"), saveBtn = $("save"), delBtn = $("del");
 
   const scriptUrl = () => CFG.scriptUrl || store.get(K.url, "");
   const clave = () => store.get(K.clave, "");
@@ -446,6 +465,8 @@
     const [y, m, d] = iso.split("-").map(Number);
     return new Date(y, m - 1, d).toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" }).replace(".", "");
   };
+  // Primera letra en mayúscula ("tarde en el parque" → "Tarde en el parque"), aunque empiece con ¿ o comillas
+  const capitalizar = (t) => t.replace(/\p{L}/u, (c) => c.toLocaleUpperCase("es"));
   const nuevoId = () => (window.crypto && crypto.randomUUID)
     ? crypto.randomUUID()
     : "e" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
@@ -554,9 +575,10 @@
   function render() {
     const visible = entries
       .filter(e => filter === "Todas" || e.tipo === filter)
+      .filter(e => filtroEstado === "todas" || (filtroEstado === "escritas" ? e.hecho : !e.hecho))
       .sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "") || (b.creado || 0) - (a.creado || 0));
 
-    const firma = filter + JSON.stringify(visible) + entries.length;
+    const firma = filter + filtroEstado + JSON.stringify(visible) + entries.length;
     if (firma === ultimoRender) return;
     ultimoRender = firma;
 
@@ -568,7 +590,9 @@
       const empty = document.createElement("div");
       empty.className = "empty";
       if (servidor === null && configurado()) empty.innerHTML = "<strong>Cargando tus registros…</strong>";
-      else if (filter === "Todas") empty.innerHTML = "<strong>Aún no hay registros</strong>Toca el botón + para agregar el primero.";
+      else if (!entries.length) empty.innerHTML = "<strong>Aún no hay registros</strong>Toca el botón + para agregar el primero.";
+      else if (filtroEstado === "escritas") empty.innerHTML = "<strong>Nada escrito todavía con este filtro</strong>Marca el círculo de una entrada cuando la escribas.";
+      else if (filtroEstado === "pendientes") empty.innerHTML = "<strong>No queda nada por escribir</strong>Todo lo de este filtro ya está escrito.";
       else empty.innerHTML = `<strong>Sin ${filter === "Anécdota" ? "anécdotas" : "historias"} todavía</strong>Cambia el filtro o agrega una nueva.`;
       list.appendChild(empty);
       return;
@@ -605,11 +629,19 @@
       date.textContent = fmtDate(e.fecha);
       top.append(pill, date);
 
-      const text = document.createElement("p");
-      text.className = "text";
-      text.textContent = e.texto;
-
-      body.append(top, text);
+      body.append(top);
+      if (e.texto) {
+        const text = document.createElement("p");
+        text.className = "text";
+        text.textContent = e.texto;
+        body.append(text);
+      }
+      if (e.descripcion) {
+        const desc = document.createElement("p");
+        desc.className = "desc";
+        desc.textContent = e.descripcion;
+        body.append(desc);
+      }
       body.addEventListener("click", () => openSheet(entries.find(x => x.id === e.id) || e));
       card.append(check, body);
       list.appendChild(card);
@@ -623,6 +655,7 @@
     $("sheet-title").textContent = entry ? "Editar entrada" : "Nueva entrada";
     fDate.value = (entry && entry.fecha) || today();
     fText.value = entry ? entry.texto : "";
+    fDesc.value = entry ? (entry.descripcion || "") : "";
     const tipo = entry ? entry.tipo : (filter === "Historia" ? "Historia" : "Anécdota");
     (tipo === "Historia" ? $("t-hist") : $("t-anec")).checked = true;
     delBtn.hidden = !entry;
@@ -641,7 +674,7 @@
   }
 
   function updateSave() {
-    saveBtn.disabled = !fText.value.trim() || !fDate.value;
+    saveBtn.disabled = !(fText.value.trim() || fDesc.value.trim()) || !fDate.value;
   }
 
   function resetDelete() {
@@ -662,10 +695,11 @@
     ev.preventDefault();
     const data = {
       fecha: fDate.value,
-      texto: fText.value.trim(),
+      texto: capitalizar(fText.value.trim()),
+      descripcion: capitalizar(fDesc.value.trim()),
       tipo: document.querySelector('input[name="tipo"]:checked').value
     };
-    if (!data.texto || !data.fecha) return;
+    if (!(data.texto || data.descripcion) || !data.fecha) return;
     const actual = editingId && entries.find(e => e.id === editingId);
     if (actual) {
       encolar({ accion: "actualizar", entrada: { ...actual, ...data } });
@@ -740,10 +774,17 @@
 
   // ---------- Eventos ----------
 
-  document.querySelectorAll(".chip").forEach(chip => {
+  document.querySelectorAll(".chip[data-filter]").forEach(chip => {
     chip.addEventListener("click", () => {
       filter = chip.dataset.filter;
-      document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c === chip)));
+      document.querySelectorAll(".chip[data-filter]").forEach(c => c.setAttribute("aria-pressed", String(c === chip)));
+      render();
+    });
+  });
+  document.querySelectorAll(".chip[data-estado]").forEach(chip => {
+    chip.addEventListener("click", () => {
+      filtroEstado = chip.dataset.estado;
+      document.querySelectorAll(".chip[data-estado]").forEach(c => c.setAttribute("aria-pressed", String(c === chip)));
       render();
     });
   });
@@ -753,6 +794,7 @@
   $("cancel").addEventListener("click", closeSheet);
   overlay.addEventListener("click", closeSheet);
   fText.addEventListener("input", updateSave);
+  fDesc.addEventListener("input", updateSave);
   fDate.addEventListener("input", updateSave);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && sheet.classList.contains("open")) closeSheet(); });
 
