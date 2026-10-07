@@ -144,8 +144,11 @@
   }
   .check svg { width: 14px; height: 14px; }
   .check[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-  .card.done { opacity: .55; }
-  .card.done .text, .card.done .desc { text-decoration: line-through; text-decoration-color: var(--muted); }
+  /* Escrita: se tacha solo el título; la descripción queda intacta y aparece una etiqueta junto al tipo */
+  .card.done .text { text-decoration: line-through; text-decoration-color: var(--muted); text-decoration-thickness: 1.5px; }
+  .pills { display: flex; align-items: center; gap: 6px; }
+  .pill.escrita { display: inline-flex; align-items: center; gap: 4px; background: #F1EFE8; color: #5F5E5A; }
+  .pill.escrita svg { width: 11px; height: 11px; }
   .card-top {
     display: flex;
     align-items: center;
@@ -627,7 +630,16 @@
       const date = document.createElement("span");
       date.className = "date";
       date.textContent = fmtDate(e.fecha);
-      top.append(pill, date);
+      const pills = document.createElement("span");
+      pills.className = "pills";
+      pills.append(pill);
+      if (e.hecho) {
+        const escrita = document.createElement("span");
+        escrita.className = "pill escrita";
+        escrita.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Escrita';
+        pills.append(escrita);
+      }
+      top.append(pills, date);
 
       body.append(top);
       if (e.texto) {
